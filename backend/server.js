@@ -38,7 +38,7 @@ app.get('/api/demo', (req, res) => {
     // ส่งข้อมูล demo กลับไป
     res.json({
         message: 'ข้อมูล Demo สำหรับการพัฒนา Full-Stack',
-        student: { // <-- เพิ่ม Object นี้
+        student: {
             id: '6604101378',
             name: 'วีริศา',
             surname: 'เขียววรรณา'
