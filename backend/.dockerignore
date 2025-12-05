@@ -1,0 +1,24 @@
+--------------------
+
+Backend Build Context (Express)
+
+--------------------
+
+ไม่ต้องคัดลอก Node Modules เข้ามาใน Build Context จาก Local Machine
+
+node_modules
+
+ไม่ต้องคัดลอกไฟล์ Version Control
+
+.git
+.gitignore
+
+ไม่ต้องคัดลอกไฟล์ Log ที่ถูกสร้างใน Local Machine
+
+Docker Volume จะสร้างและจัดการโฟลเดอร์นี้ให้เอง
+
+logs
+
+ไม่ต้องคัดลอกไฟล์ Environment Variables (เราใช้ .env ใน Dockerfile/Compose)
+
+.env

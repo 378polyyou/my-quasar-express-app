@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  frontend:
+    # ชื่อ Image ที่จะถูก Push ไป Docker Hub
+    image: 378ploy/fullstack-demo-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80" # Frontend เข้าถึงได้ที่พอร์ต 8080 ภายนอก
+    environment:
+      - VITE_API_URL=http://backend:3000 # เชื่อมต่อกับ backend ภายใน network
+    depends_on:
+      backend:
+        condition: service_healthy # รอให้ Backend พร้อมก่อนรัน
+
+  backend:
+    # ชื่อ Image ที่จะถูก Push ไป Docker Hub
+    image: 378ploy/fullstack-demo-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000" # Backend เข้าถึงได้ที่พอร์ต 3000 ภายนอก
+    volumes:
+      - ./backend/logs:/app/logs # Volume สำหรับเก็บ Log
+    healthcheck:
+      # การตรวจสอบสถานะจากไฟล์ต้นฉบับ
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/demo" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  default: # ใช้ default network สำหรับการสื่อสารภายใน

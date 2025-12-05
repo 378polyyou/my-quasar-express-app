@@ -1,0 +1,26 @@
+--------------------
+
+Frontend Build Context (Quasar)
+
+--------------------
+
+ไม่ต้องคัดลอก Node Modules เข้ามาใน Build Context จาก Local Machine
+
+node_modules
+
+ไม่ต้องคัดลอก Build Output จาก Local Machine (เพราะเราจะ Build ใน Docker)
+
+dist
+
+ไม่ต้องคัดลอกไฟล์ Version Control
+
+.git
+.gitignore
+
+ไม่ต้องคัดลอกไฟล์ของ Backend (เพื่อลดขนาด Context)
+
+../backend
+
+ไม่ต้องคัดลอกไฟล์ Environment Variables (เราใช้ .env ใน Dockerfile/Compose)
+
+.env
