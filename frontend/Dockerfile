@@ -1,3 +1,4 @@
+#frontend Dockerfile
 # STAGE 1: BUILD STAGE
 # ใช้ Node.js 20 เพื่อติดตั้ง dependencies และ Build โค้ด
 FROM node:20 as builder

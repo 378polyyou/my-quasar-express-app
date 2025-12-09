@@ -1,8 +1,9 @@
-// server.js
+//ba
+// ต้องติดตั้ง package 'cors' ด้วย: npm install cors
 const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
+const cors = require('cors'); // <-- ต้องเพิ่ม
 const path = require('path');
+const fs = require('fs');
 // โหลดตัวแปรสภาพแวดล้อมจากไฟล์ .env
 require('dotenv').config();
 
@@ -11,8 +12,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- Middleware (ตัวกลาง) ---
-// อนุญาต cross-origin เพื่อให้ frontend เข้าถึงได้
+// อนุญาต cross-origin (CORS) ให้ frontend เข้าถึงได้
+// หากไม่ระบุ Origin ใน cors() จะอนุญาตทั้งหมดใน Dev Environment
 app.use(cors());
+
 // อนุญาตให้ Express อ่าน JSON body จาก request
 app.use(express.json());
 
@@ -54,6 +57,15 @@ app.get('/api/demo', (req, res) => {
     });
 });
 
+// Endpoint อื่นๆ (สำหรับ Health Check หรือ Basic Check)
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Server is healthy' });
+});
+
+app.get('/', (req, res) => {
+    res.send('Welcome to Express Backend!');
+});
+
 // --- การจัดการข้อผิดพลาด (Error handling) ---
 app.use((err, req, res, next) => {
     console.error('--- เกิดข้อผิดพลาดใน Server ---');
@@ -62,7 +74,8 @@ app.use((err, req, res, next) => {
 });
 
 // --- เริ่ม Server ---
-app.listen(PORT, () => {
+// *** สำคัญ: ฟัง (listen) ที่ 0.0.0.0 เพื่อให้เข้าถึงได้จากภายนอก Container ***
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`เซิร์ฟเวอร์กำลังทำงานบนพอร์ต ${PORT}`);
     console.log(`ทดสอบได้ที่: http://localhost:${PORT}/api/demo`);
 });
