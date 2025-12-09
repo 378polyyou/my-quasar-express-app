@@ -1,0 +1,27 @@
+{
+    // บล็อก compilerOptions: กำหนดวิธีการคอมไพล์โค้ด
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "commonjs",
+        // กำหนดว่าไฟล์ .ts อยู่ที่ไหน และ Output .js อยู่ที่ไหน
+        "rootDir": "./src",
+        "outDir": "./dist",
+        // การตั้งค่าความเข้มงวด
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        // การตั้งค่าการ Resolve Module
+        "moduleResolution": "node"
+    },
+    // *** บล็อกเหล่านี้ต้องอยู่ระดับเดียวกับ compilerOptions ***
+    // include: กำหนดไฟล์ที่จะถูกรวมในการคอมไพล์
+    "include": [
+        "src/**/*"
+    ],
+    // exclude: กำหนดไฟล์/โฟลเดอร์ที่จะถูกยกเว้น
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}

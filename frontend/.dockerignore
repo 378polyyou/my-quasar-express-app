@@ -23,4 +23,3 @@ dist
 
 ไม่ต้องคัดลอกไฟล์ Environment Variables (เราใช้ .env ใน Dockerfile/Compose)
 
-.env

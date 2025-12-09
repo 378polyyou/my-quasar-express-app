@@ -1,0 +1,9 @@
+1.ดาวน์โหลด
+docker-compose.yml
+2.นําไปไปวางไว้ในโฟลเดอร์ที่ต้องการ
+3.รันคำสั่ง
+docker compose pull
+docker compose up -d
+4.รอจนกว่าจะเริ่มต้นเรียบร้อยแล้ว
+5.เปิด browser แล้วไปที่ http://localhost:8080
+

@@ -1,115 +1,109 @@
 <template>
-<q-page padding>
-  <div class="text-h4 q-mb-md">
-    Advanced Full-Stack Demo (Quasar + Express)
-  </div>
-  
-  <q-card class="q-mb-md">
-    <q-card-section>
-      <div class="text-h6">Git Workflow</div>
-      <q-list bordered separator class="q-mt-sm">
-        <q-item v-for="(step, index) in gitSteps" :key="index">
-          <q-item-section avatar>
-            <q-badge>{{ index + 1 }}</q-badge>
-          </q-item-section>
-          <q-item-section>
-            <q-item-label>{{ step.title }}</q-item-label>
-            <q-item-label caption>{{ step.detail }}</q-item-label>
-          </q-item-section>
-        </q-item>
-      </q-list>
-    </q-card-section>
-  </q-card>
+  <q-page padding>
+    <div class="text-h4 q-mb-md">
+      Task List (Express + Prisma + Supabase)
+    </div>
 
-  <q-card class="q-mb-md">
-    <q-card-section>
-      <div class="text-h6">Docker Concepts</div>
-      <q-list bordered separator class="q-mt-sm">
-        <q-item v-for="(item, index) in dockerItems" :key="index">
-          <q-item-section>
-            <q-item-label>{{ item.title }}</q-item-label>
-            <q-item-label caption>{{ item.detail }}</q-item-label>
-          </q-item-section>
-        </q-item>
-      </q-list>
-    </q-card-section>
-  </q-card>
+    <!-- ปุ่มโหลดและแสดงสถานะ/ข้อความ Error -->
+    <div class="q-mb-md row items-center q-gutter-sm">
+      <q-btn
+        color="primary"
+        label="Reload Tasks"
+        :loading="loading"
+        @click="fetchTasks"
+        icon="refresh"
+      />
+      <span v-if="errorMessage" class="text-negative text-weight-bold">
+        {{ errorMessage }}
+      </span>
+    </div>
 
-  <q-card>
-    <q-card-section>
-      <div class="text-h6">Data from Backend API</div>
-      
-      <p v-if="!loading && apiData.message" class="text-subtitle1 text-primary q-pb-sm">
-        **{{ apiData.message }}**
-      </p>
-      
-      <q-spinner v-if="loading" color="primary" size="2em" />
-      <q-list v-else bordered separator class="q-mt-sm">
-        <q-item class="bg-blue-grey-1">
-                    <q-item-section>
-                        <q-item-label overline>ข้อมูลนักศึกษา</q-item-label>
-                        <q-item-label>ชื่อ: {{ apiData.student.name }} {{ apiData.student.surname }}</q-item-label>
-                        <q-item-label caption>รหัส: {{ apiData.student.id }}</q-item-label>
-                    </q-item-section>
-                </q-item>
-        <q-item>
+    <q-spinner v-if="loading" color="primary" size="3em" />
+
+    <div v-else>
+      <div v-if="tasks.length === 0" class="text-h6 text-grey-7 q-py-lg">
+        ยังไม่มีงานในระบบ ลองสร้างด้วย curl / Postman ก่อน
+      </div>
+
+      <!-- แสดงรายการ Task เป็น q-list -->
+      <q-list v-else bordered separator>
+        <!-- ใช้ q-item เพื่อแสดงแต่ละ Task -->
+        <q-item v-for="task in tasks" :key="task.id" clickable v-ripple>
           <q-item-section>
-            <q-item-label>Advanced Git</q-item-label>
-            <q-item-label caption>{{ apiData.git.detail }}</q-item-label>
+            <q-item-label class="text-lg text-weight-medium text-primary">{{ task.title }}</q-item-label>
+            <!-- task.description เป็น optional จึงใช้ ? เพื่อป้องกัน error ถ้าเป็น null -->
+            <q-item-label caption v-if="task.description">
+              {{ task.description }}
+            </q-item-label>
+            <q-item-label caption v-else class="text-grey-6">
+              (ไม่มีคำอธิบาย)
+            </q-item-label>
           </q-item-section>
-        </q-item>
-        <q-item>
-          <q-item-section>
-            <q-item-label>Advanced Docker</q-item-label>
-            <q-item-label caption>{{ apiData.docker.detail }}</q-item-label>
+
+          <q-item-section side>
+            <q-item-label caption class="text-right">
+              <!-- แสดงวันที่สร้างในรูปแบบท้องถิ่น -->
+              Created: {{ new Date(task.createdAt).toLocaleString() }}
+            </q-item-label>
+            <q-item-label caption class="text-right">
+              Updated: {{ new Date(task.updatedAt).toLocaleString() }}
+            </q-item-label>
           </q-item-section>
         </q-item>
       </q-list>
-      <q-btn v-if="!loading" color="primary" @click="fetchData" class="q-mt-md">Refresh Data</q-btn>
-    </q-card-section>
-  </q-card>
-</q-page>
+    </div>
+  </q-page>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { useQuasar } from 'quasar';
 
-// ข้อมูล Git/Docker (จากตัวอย่างก่อนหน้า)
-const gitSteps = [
-  { title: 'Feature Branching', detail: 'สร้าง branch ใหม่สำหรับทุก feature/bugfix' },
-  { title: 'Code Review', detail: 'ต้องมีการรีวิวโค้ดก่อน merge เข้า main' },
-  { title: 'Conventional Commits', detail: 'ใช้รูปแบบ commit message ที่เป็นมาตรฐาน (เช่น feat: fix:)' }
-];
-const dockerItems = [
-  { title: 'Immutable Images', detail: 'ไม่ควรแก้ข้อมูลใน container ที่รันอยู่' },
-  { title: 'Layer Caching', detail: 'ใช้ประโยชน์จากการแคชของ Docker เพื่อให้ build เร็วขึ้น' },
-  { title: 'Multi-stage Build', detail: 'ใช้เพื่อลดขนาด final image' }
-];
+// อ่านค่าจาก quasar.config → env.API_URL
+// Quasar 2.x จะใช้ process.env ในโค้ด build ได้
+const API_URL = process.env.API_URL || 'http://localhost:3000';
 
-// อัปเดตการกำหนดค่าเริ่มต้นเพื่อรองรับฟิลด์ 'message' ใหม่
-const apiData = ref({ message: '', git: {}, docker: {} }); 
-const loading = ref(true);
+const $q = useQuasar(); // ใช้สำหรับแสดง Notification (optional, แต่ดีกว่า console.error)
 
-const fetchData = async () => {
+const tasks = ref([]);
+const loading = ref(false);
+const errorMessage = ref('');
+
+// ฟังก์ชันสำหรับดึงข้อมูล Task จาก Backend
+const fetchTasks = async () => {
   loading.value = true;
+  errorMessage.value = '';
+  
+  // ให้ Quasar แสดง Loading Bar ด้านบน
+  $q.loading.show({ message: 'กำลังโหลด Tasks...' });
+
   try {
-    // ใช้ VITE_API_URL จากไฟล์ .env หรือ Environment Variable
-    //const response = await axios.get(import.meta.env.VITE_API_URL + '/api/demo');
-    const response = await axios.get(process.env.VITE_API_URL + '/api/demo');
-    apiData.value = response.data;
-  } catch (error) {
-    console.error('API Error:', error);
-    // เพิ่มการจัดการข้อผิดพลาดกรณีเรียก API ไม่สำเร็จ
-    apiData.value = { 
-        message: 'เกิดข้อผิดพลาดในการเรียก API (โปรดตรวจสอบว่า Backend ทำงานอยู่)', 
-        student: {},
-        git: { detail: 'ไม่สามารถโหลดข้อมูล' }, 
-        docker: { detail: 'ไม่สามารถโหลดข้อมูล' } 
-    };
+    const res = await axios.get(API_URL + '/api/tasks');
+    
+    // ตรวจสอบโครงสร้าง response: Backend ส่ง { data: [...] }
+    tasks.value = res.data.data; 
+
+    $q.notify({
+      type: 'positive',
+      message: 'โหลด Tasks สำเร็จ',
+      timeout: 1000,
+    });
+
+  } catch (err) {
+    console.error('API /api/tasks error:', err);
+    errorMessage.value = 'โหลดงานจากฐานข้อมูลไม่สำเร็จ กรุณาตรวจสอบ Backend และ Network';
+
+    $q.notify({
+      type: 'negative',
+      message: errorMessage.value,
+    });
   } finally {
     loading.value = false;
+    $q.loading.hide();
   }
 };
-  onMounted(fetchData); // เรียก API เมื่อ component ถูก mount
+
+// ดึงข้อมูลทันทีที่ Component ถูก Mount
+onMounted(fetchTasks);
 </script>
