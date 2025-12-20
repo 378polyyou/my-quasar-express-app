@@ -1,35 +1,27 @@
 services:
-  frontend:
-    # ชื่อ Image ที่จะถูก Push ไป Docker Hub
-    image: 378ploy/fullstack-demo-frontend:latest
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "8080:80" # Frontend เข้าถึงได้ที่พอร์ต 8080 ภายนอก
-    environment:
-      - VITE_API_URL=http://backend:3000 # เชื่อมต่อกับ backend ภายใน network
-    depends_on:
-      backend:
-        condition: service_healthy # รอให้ Backend พร้อมก่อนรัน
-
   backend:
-    # ชื่อ Image ที่จะถูก Push ไป Docker Hub
-    image: 378ploy/fullstack-demo-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: backend
     ports:
-      - "3000:3000" # Backend เข้าถึงได้ที่พอร์ต 3000 ภายนอก
-    volumes:
-      - ./backend/logs:/app/logs # Volume สำหรับเก็บ Log
-    healthcheck:
-      # การตรวจสอบสถานะด้วย curl (เพราะ image node:slim มี curl จาก frontend Dockerfile หรือต้องลงเพิ่ม)
-      # ใน Dockerfile backend เราลง curl ไว้แล้ว
-      test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - "3000:3000"
+    # *** [แก้ไขจุดนี้] ชี้ไปที่ไฟล์ .env ที่อยู่ในโฟลเดอร์ backend ***
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+    restart: always
 
-networks:
-  default: # ใช้ default network สำหรับการสื่อสารภายใน
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:3000
+    container_name: frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: always
