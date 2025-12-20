@@ -1,39 +1,46 @@
-#backend Dockerfile
-# STAGE 1: Base Image
-# ใช้ Node.js 20 LTS เวอร์ชั่นที่เบาที่สุดเพื่อลดขนาด Image
-FROM node:20-slim
+# Stage 1: Build stage
+FROM node:20-slim AS builder
 
-# กำหนด working directory ภายใน container
-WORKDIR /app
+# ติดตั้ง OpenSSL เพราะ Prisma ต้องการใช้ในการสื่อสารกับฐานข้อมูล
+RUN apt-get update -y && apt-get install -y openssl
 
-# คัดลอก package.json และ package-lock.json (ถ้ามี) ก่อน
-# เพื่อใช้ประโยชน์จาก Docker Layer Caching (ถ้า dependencies ไม่เปลี่ยน)
-COPY package*.json ./
+WORKDIR /app/backend
 
-# ติดตั้ง dependencies ทั้งหมด
-# --omit=dev ใช้เพื่อไม่ติดตั้ง dependencies ที่ใช้เฉพาะตอนพัฒนา (เช่น nodemon)
-RUN npm install --omit=dev
+# Copy package files เพื่อใช้ประโยชน์จาก Docker Layer Cache
+COPY package.json package-lock.json ./
+RUN npm ci
 
-RUN apt-get update && \
-  apt-get install -y --no-install-recommends curl && \
-  apt-get clean && \
-  rm -rf /var/lib/apt/lists/*
+# Copy โฟลเดอร์ prisma (ซึ่งบรรจุ schema.prisma)
+COPY prisma ./prisma/
 
-# คัดลอกไฟล์โค้ดทั้งหมดมา
-# เราคัดลอกไฟล์โค้ดและ server.js (รวมถึง .env ที่อาจมีการตั้งค่า)
+# *** ใช้ Dummy DATABASE_URL เพื่อให้ prisma generate ผ่านขั้นตอน build ได้โดยไม่ต้องใช้ .env จริง ***
+RUN DATABASE_URL="postgresql://dummyuser:dummypass@localhost:5432/dummydb" npx prisma generate
+
+# Copy source code ทั้งหมดเพื่อเตรียม Build (Compile TS เป็น JS)
 COPY . .
+RUN npm run build
 
-# กำหนด Environment Variables ที่จำเป็น
+# Stage 2: Run stage (Production Image)
+FROM node:20-slim AS production
+
+# ติดตั้ง OpenSSL ใน Stage สำหรับรันจริง (Runtime)
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/app
+
+# Copy เฉพาะไฟล์ที่จำเป็นสำหรับการรันจาก builder stage เพื่อลดขนาด Image
+COPY --from=builder /app/backend/package*.json ./
+COPY --from=builder /app/backend/node_modules ./node_modules
+COPY --from=builder /app/backend/dist ./dist
+COPY --from=builder /app/backend/prisma ./prisma
+
+# กำหนดตัวแปรสภาพแวดล้อมพื้นฐานสำหรับ Production
+ENV NODE_ENV=production
 ENV PORT=3000
 
-# เปิดพอร์ตที่ Express Server ทำงานอยู่
+# เปิด Port 3000 สำหรับการเชื่อมต่อ
 EXPOSE 3000
 
-# กำหนด Healthcheck เพื่อให้ Docker Compose สามารถตรวจสอบความพร้อมของ API ได้
-# ทดสอบโดยการเรียก endpoint /api/demo
-HEALTHCHECK --interval=30s --timeout=20s --retries=10 \
-  CMD curl -f http://localhost:3000/api/demo || exit 1
-
-# คำสั่งเริ่มต้นเมื่อ Container รัน
-# รัน main file ของ Express server
-CMD [ "node", "service.js" ]
+# รัน Server โดยเรียกใช้ไฟล์ที่คอมไพล์แล้วใน dist/server.js
+# ตอนรันจริง ระบบจะดึง DATABASE_URL จาก docker-compose.yml หรือไฟล์ .env บนเครื่อง
+CMD ["node", "dist/server.js"]

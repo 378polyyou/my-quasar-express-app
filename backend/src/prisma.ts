@@ -1,21 +1,29 @@
-// src/prisma.ts
-import 'dotenv/config'; // โหลด .env ให้ process.env ใช้งานได้
-import { PrismaClient } from './generated/prisma';
+import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-// ใช้ DATABASE_URL จาก .env
-const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL!,
-});
-// ทำ global singleton ป้องกัน new PrismaClient บ่อย ๆ ตอน dev (nodemon reload)
-const globalForPrisma = globalThis as unknown as {
-    prisma?: PrismaClient;
-};
-export const prisma =
-    globalForPrisma.prisma ??
-    new PrismaClient({
-        adapter, //     สำคัญสำหรับ Prisma 7 + Postgres
-        log: ['query', 'info', 'warn', 'error'],
-    });
-if (process.env.NODE_ENV !== 'production') {
-    globalForPrisma.prisma = prisma;
+import pg from 'pg';
+
+// ดึง DATABASE_URL จาก environment variable (ที่ส่งมาจาก Docker Compose)
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error("❌ CRITICAL ERROR: DATABASE_URL is not defined in environment variables.");
+  throw new Error("DATABASE_URL must be provided via environment variables.");
 }
+
+// ตั้งค่า Pool สำหรับการเชื่อมต่อ Postgres
+const pool = new pg.Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+// ใช้ Singleton pattern เพื่อป้องกันการสร้าง connection ซ้อนกันมากเกินไป
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    adapter,
+    log: ['query', 'info', 'warn', 'error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
